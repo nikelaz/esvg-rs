@@ -9,7 +9,7 @@ use crate::plugins::ShapeToPathPlugin;
 use crate::arbiter::Arbiter;
 
 fn main() {
-  let svg_str = "<svg version=\"1.2\"><path d=\"test\" data-test=\"name\"></path><path d=\"test\"/><rect x=\"150\" width=\"10\"></rect></svg>";
+  let svg_str = "<svg version=\"1.2\"><path d=\"test\" data-test=\"name\"></path><path d=\"test\"/><rect x=\"150\" y=\"100\" fill=\"#fff\" height=\"10\" width=\"10\"></rect></svg>";
   let svg_input = Svg::from_str(svg_str).expect("Failed to parse the SVG");
 
   // println!("SVG Input: {:?}", svg_input);

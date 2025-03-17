@@ -4,7 +4,7 @@ use xmltree::Element;
 
 pub struct ShapeToPathPlugin {}
 
-fn convertRectToPath(element: &Element) {
+fn convertRectToPath(element: &mut Element) {
   let x = element.attributes.get("x");
   let y = element.attributes.get("y");
   let width = element.attributes.get("width");
@@ -15,9 +15,27 @@ fn convertRectToPath(element: &Element) {
   if x == None || y == None || width == None || height == None || rx != None || ry != None {
     return;
   }
-  else {
-    println!("x is {}", x.unwrap());
-  }
+
+  let x_val = x.unwrap();
+  let y_val = y.unwrap();
+  let width_val = width.unwrap();
+  let height_val = height.unwrap();
+
+  let path_data = format!(
+    "M{} {} H{} V{} H{} Z",
+    x_val,
+    y_val,
+    x_val.parse::<f32>().unwrap() + width_val.parse::<f32>().unwrap(),
+    y_val.parse::<f32>().unwrap() + height_val.parse::<f32>().unwrap(),
+    x_val
+  );
+
+  element.name = "path".to_string();
+  element.attributes.remove("x");
+  element.attributes.remove("y");
+  element.attributes.remove("width");
+  element.attributes.remove("height");
+  element.attributes.insert("d".to_string(), path_data);
 }
 
 impl SingleElementPluginTrait for ShapeToPathPlugin {
@@ -25,7 +43,7 @@ impl SingleElementPluginTrait for ShapeToPathPlugin {
     let mut element_clone = element.clone();
 
     if element_clone.name == "rect" {
-      convertRectToPath(&element_clone);
+      convertRectToPath(&mut element_clone);
     }
     // if let Some(name) = element_clone.name.as_str() {
     //   match name {
