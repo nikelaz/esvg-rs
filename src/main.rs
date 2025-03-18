@@ -2,29 +2,40 @@ mod svg;
 mod plugin;
 mod plugins;
 mod arbiter;
+mod helpers;
+mod path;
 
+use std::env;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
 use crate::svg::Svg;
+use crate::arbiter::Arbiter;
 use crate::plugins::RemoveUnnecessaryAttrsPlugin;
 use crate::plugins::ShapeToPathPlugin;
-use crate::arbiter::Arbiter;
+use crate::plugins::ApplyTransformsPlugin;
 
 fn main() {
-  let svg_str = "<svg version=\"1.2\"><path d=\"test\" data-test=\"name\"></path><path d=\"test\"/><rect x=\"150\" y=\"100\" fill=\"#fff\" height=\"10\" width=\"10\"></rect></svg>";
-  let svg_input = Svg::from_str(svg_str).expect("Failed to parse the SVG");
+  let args: Vec<String> = env::args().collect();
+  let file_path = &args[1];
+  let out_path = &args[2];
+
+  let svg_string = fs::read_to_string(file_path).expect("Filed to read input SVG");
+  let svg_input = Svg::from_string(&svg_string).expect("Failed to parse the SVG");
 
   // println!("SVG Input: {:?}", svg_input);
   println!("Input Size: {}", svg_input.to_string().unwrap().len());
 
-  println!("Creating a new arbiter");
-
   let mut arbiter = Arbiter::new();
   arbiter.add_single_element_plugin(Box::new(RemoveUnnecessaryAttrsPlugin {}));
   arbiter.add_single_element_plugin(Box::new(ShapeToPathPlugin {}));
+  arbiter.add_single_element_plugin(Box::new(ApplyTransformsPlugin {}));
   let svg_output = arbiter.process(&svg_input).expect("Failed to process the SVG");
 
   // println!("SVG Output: {:?}", svg_output);
   println!("Output Size: {}", svg_output.to_string().unwrap().len());
 
-  println!("Svg output:");
-  println!("{:?}", svg_output.to_string());
+  let mut output_file = File::create(out_path).unwrap();
+  let _ = output_file.write_all(svg_output.to_string().unwrap().as_bytes());
 }
+

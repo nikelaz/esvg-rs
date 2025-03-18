@@ -2,18 +2,11 @@ use crate::svg::Svg;
 use std::error::Error;
 use crate::plugin::SingleElementPluginTrait;
 use crate::plugin::WholeSVGPluginTrait;
-use xmltree::Element;
+use crate::helpers::element_to_string;
 
 pub struct Arbiter {
   single_element_plugins: Vec<Box<dyn SingleElementPluginTrait>>,
   whole_svg_plugins: Vec<Box<dyn WholeSVGPluginTrait>>,
-}
-
-fn element_to_string(element: &Element) -> Result<String, Box<dyn Error>> {
-  let mut buffer = Vec::new();
-  element.write(&mut buffer)?;
-  let res = String::from_utf8(buffer)?;
-  Ok(res)
 }
 
 impl Arbiter {
@@ -36,30 +29,24 @@ impl Arbiter {
     let mut svg_clone = svg.clone();
 
     for whole_svg_plugin in &self.whole_svg_plugins {
-      println!("Running whole SVG plugin");
       let svg_output = whole_svg_plugin.process(&svg_clone)?;
       if svg_output.to_string().unwrap().len() < svg_clone.to_string().unwrap().len() {
         svg_clone = svg_output;
-        println!("Plugin reduced the size of the SVG");
       }
     }
 
     for single_plugin in &self.single_element_plugins {
-      println!("Running single plugin");
-
       let root_plugin_result = single_plugin.process(&svg_clone.root)?;
 
       if element_to_string(&root_plugin_result).unwrap().len() < element_to_string(&svg_clone.root).unwrap().len() {
-        svg_clone.root = root_plugin_result;
-        println!("Plugin reduced the size of the element");
+        svg_clone.root = root_plugin_result; 
       }
 
       for node in &mut svg_clone.root.children {
         let element = node.as_mut_element().unwrap();
         let element_plugin_result = single_plugin.process(&element)?;
-        if element_to_string(&element_plugin_result).unwrap().len() < element_to_string(&element).unwrap().len() {
+        if element_to_string(&element_plugin_result).unwrap().len() < element_to_string(&element).unwrap().len() {      
           *element = element_plugin_result;
-          println!("Plugin reduced the size of the element");
         }
       }
     }

@@ -7,8 +7,8 @@ pub struct Svg {
 }
 
 impl Svg {
-  pub fn from_str(svg_str: &str) -> Result<Self, ParseError> {
-    let root = Element::parse(svg_str.as_bytes())?;
+  pub fn from_string(svg_string: &String) -> Result<Self, ParseError> {
+    let root = Element::parse(svg_string.as_bytes())?;
     Ok(Svg { root })
   }
 
