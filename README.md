@@ -1,12 +1,12 @@
 # ESVG
 
-ESVG is a powerful SVG optimization tool designed to reduce file sizes without compromising the visual quality of rendered graphics. It leverages Competitive Transformer Optimization <sup>[1]</sup> to explore multiple optimization strategies and select the most efficient one.
+ESVG is an SVG optimization utility designed to reduce file sizes without compromising perceivable visual quality of rendered vector graphics. It leverages Competitive Transformer Optimization <sup>[1]</sup> to explore multiple optimization strategies and select the most efficient one.
 
 ## Competitive Transformer Optimization <sup>[1]</sup>
 
-At the heart of ESVG's optimization process is the Arbiter, which acts as the central orchestrator. The Arbiter passes the input SVG through a series of transformers, each a specialized plugin that applies various techniques to improve the SVG. These transformers can make a wide range of changes, such as simplifying paths, removing unnecessary elements, or applying different encoding schemes.
+At the heart of ESVG's optimization process is the Arbiter, which acts as the central orchestrator. The Arbiter passes the input SVG through a series of transformers, each a specialized plugin that applies various transformations aiming to make the file more efficient. These transformers can make a wide range of changes, such as simplifying paths, removing unnecessary elements, applying transformations.
 
-The key innovation of ESVG is its use of competitive optimization. Instead of applying a single transformation, the Arbiter evaluates multiple transformers simultaneously. After each transformer processes the SVG, the Arbiter compares the results and keeps the transformation that achieves the most efficient output. Efficiency, in this case, is defined by the reduction in file size while ensuring that the rendered vector graphics appear identical or imperceptibly different.
+The interesting part of ESVG is its use of competitive optimization. It evaluates multiple transformers simultaneously. After each transformer processes the SVG, the Arbiter compares the results and keeps the transformation that achieves the most efficient output. Efficiency, in this case, is defined as the reduction in file size while ensuring that the rendered vector graphics appear identical or imperceptibly different.
 
 The process works as follows:
 
