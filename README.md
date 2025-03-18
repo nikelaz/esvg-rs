@@ -1,8 +1,8 @@
 # ESVG
 
-ESVG is a powerful SVG optimization tool designed to reduce file sizes without compromising the visual quality of rendered graphics. It leverages Competitive Transformer Optimization^[1]^ to explore multiple optimization strategies and select the most efficient one.
+ESVG is a powerful SVG optimization tool designed to reduce file sizes without compromising the visual quality of rendered graphics. It leverages Competitive Transformer Optimization <sup>[1]</sup> to explore multiple optimization strategies and select the most efficient one.
 
-## Competitive Transformer Optimization ^[1]^
+## Competitive Transformer Optimization <sup>[1]</sup>
 
 At the heart of ESVG's optimization process is the Arbiter, which acts as the central orchestrator. The Arbiter passes the input SVG through a series of transformers, each a specialized plugin that applies various techniques to improve the SVG. These transformers can make a wide range of changes, such as simplifying paths, removing unnecessary elements, or applying different encoding schemes.
 
