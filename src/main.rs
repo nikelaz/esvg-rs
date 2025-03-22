@@ -17,9 +17,25 @@ use crate::plugins::RemoveUnnecessaryAttrsPlugin;
 use crate::plugins::ShapeToPathPlugin;
 use crate::plugins::ApplyTransformsPlugin;
 use crate::plugins::CssToAttributesPlugin;
+use crate::css::CSSParser;
 
 fn main() {
-  let args: Vec<String> = env::args().collect();
+  let css = r#"
+        body { 
+            background-color: white; 
+            color: black; 
+        }
+        .container { 
+            width: 100%; 
+            height: auto; 
+        }
+    "#;
+
+    let parsed = CSSParser::from_string(&css);
+    for (selector, body) in parsed {
+        println!("Selector: {}\nBody: {}\n", selector, body);
+    }
+  /*let args: Vec<String> = env::args().collect();
   let file_path = &args[1];
   let out_path = &args[2];
 
@@ -41,6 +57,6 @@ fn main() {
   println!("Output Size: {}", svg_output.to_string().unwrap().len());
 
   let mut output_file = File::create(out_path).unwrap();
-  let _ = output_file.write_all(svg_output.to_string().unwrap().as_bytes());
+  let _ = output_file.write_all(svg_output.to_string().unwrap().as_bytes());*/
 }
 
