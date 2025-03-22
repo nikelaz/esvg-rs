@@ -3,6 +3,25 @@ use std::error::Error;
 use crate::plugin::SingleElementPluginTrait;
 use crate::plugin::WholeSVGPluginTrait;
 use crate::helpers::element_to_string;
+use xmltree::Element;
+
+fn is_container_element(element: &Element) -> bool {
+  if element.name == "g" ||
+     element.name == "a" ||
+     element.name == "clipPath" ||
+     element.name == "defs" ||
+     element.name == "marker" ||
+     element.name == "mask" ||
+     element.name == "pattern" ||
+     element.name == "switch" ||
+     element.name == "symbol" ||
+     element.name == "unknown"
+  {
+    return true;
+  }
+
+  return false;
+}
 
 pub struct Arbiter {
   single_element_plugins: Vec<Box<dyn SingleElementPluginTrait>>,
@@ -25,6 +44,21 @@ impl Arbiter {
     self.whole_svg_plugins.push(plugin);
   }
 
+  pub fn process_child_elements(element: &mut Element, single_plugin: &Box<dyn SingleElementPluginTrait>) -> Result<(), Box<dyn Error>> {
+    for node in &mut element.children { 
+      let element = node.as_mut_element().unwrap();
+      if is_container_element(&element) {
+        Arbiter::process_child_elements(element, single_plugin);
+      }
+      let element_plugin_result = single_plugin.process(&element)?;
+      if element_to_string(&element_plugin_result).unwrap().len() < element_to_string(&element).unwrap().len() {      
+        *element = element_plugin_result;
+      }
+    }
+
+    Ok(())
+  }
+
   pub fn process(&self, svg: &Svg) -> Result<Svg, Box<dyn Error>> {
     let mut svg_clone = svg.clone();
 
@@ -42,13 +76,7 @@ impl Arbiter {
         svg_clone.root = root_plugin_result; 
       }
 
-      for node in &mut svg_clone.root.children {
-        let element = node.as_mut_element().unwrap();
-        let element_plugin_result = single_plugin.process(&element)?;
-        if element_to_string(&element_plugin_result).unwrap().len() < element_to_string(&element).unwrap().len() {      
-          *element = element_plugin_result;
-        }
-      }
+      Arbiter::process_child_elements(&mut svg_clone.root, single_plugin);
     }
 
     Ok(svg_clone)

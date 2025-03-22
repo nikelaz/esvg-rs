@@ -1,10 +1,16 @@
 /**
  * Plugin
+ * 
  * Name: Shape to Path
  * Author: Nikola Lazarov
+ *
  * Description:
  * Converts simple shapes like <rect>, <line> to <path>
  * Does not try to convert circle and ellipse as that is never more efficient
+ *
+ * Todo:
+ * [ ] - Refactor
+ *
  */
 
 use std::error::Error;

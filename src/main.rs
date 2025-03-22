@@ -4,6 +4,8 @@ mod plugins;
 mod arbiter;
 mod helpers;
 mod path;
+mod transform;
+mod css;
 
 use std::env;
 use std::fs;
@@ -14,6 +16,7 @@ use crate::arbiter::Arbiter;
 use crate::plugins::RemoveUnnecessaryAttrsPlugin;
 use crate::plugins::ShapeToPathPlugin;
 use crate::plugins::ApplyTransformsPlugin;
+use crate::plugins::CssToAttributesPlugin;
 
 fn main() {
   let args: Vec<String> = env::args().collect();
@@ -23,16 +26,18 @@ fn main() {
   let svg_string = fs::read_to_string(file_path).expect("Filed to read input SVG");
   let svg_input = Svg::from_string(&svg_string).expect("Failed to parse the SVG");
 
-  // println!("SVG Input: {:?}", svg_input);
   println!("Input Size: {}", svg_input.to_string().unwrap().len());
 
   let mut arbiter = Arbiter::new();
+  
+  // Run plugins
   arbiter.add_single_element_plugin(Box::new(RemoveUnnecessaryAttrsPlugin {}));
   arbiter.add_single_element_plugin(Box::new(ShapeToPathPlugin {}));
   arbiter.add_single_element_plugin(Box::new(ApplyTransformsPlugin {}));
+  arbiter.add_whole_svg_plugin(Box::new(CssToAttributesPlugin {}));
+
   let svg_output = arbiter.process(&svg_input).expect("Failed to process the SVG");
 
-  // println!("SVG Output: {:?}", svg_output);
   println!("Output Size: {}", svg_output.to_string().unwrap().len());
 
   let mut output_file = File::create(out_path).unwrap();

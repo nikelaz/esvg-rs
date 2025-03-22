@@ -101,7 +101,7 @@ fn is_command_char (c: char) -> bool {
 #[derive(Debug)]
 pub struct PathCommand {
     pub command_type: PathCommandType,
-    pub values: Vec<f64>
+    pub values: Vec<f32>
 }
 
 impl PathCommand {
@@ -117,7 +117,7 @@ impl PathCommand {
             .trim()
             .replace(",", "")
             .split_whitespace()
-            .filter_map(|x| x.parse::<f64>().ok())
+            .filter_map(|x| x.parse::<f32>().ok())
             .collect();
     }
 

@@ -1,20 +1,18 @@
 /**
  * Plugin
+ *
  * Name: Apply Transforms
  * Author: Nikola Lazarov
+ * 
  * Description:
- * Apply transforms on vector elements
- *
- * Fix:
- * [ ] - currently in broken state as it erases the transform attribute (should only remove translate)
+ * Apply transforms on vector elements. Supports path, circle and ellipse.
+ * Applies translate and scale transformations.
  *
  * Todo:
- * [x] - implement translate for paths
- * [ ] - more efficient memory management
- * [ ] - refactor
- * [ ] - support other shapes besides paths, prioritizing the "efficient" shapes - circle, ellipse
- * [ ] - support other transform types
- * [ ] - 
+ * [x] - Support circle and ellipse (they are more efficient than path)
+ * [ ] - Support groups
+ * [ ] - Support other transform types - matrix, skew etc
+ *
  */
 
 use std::error::Error;
@@ -23,117 +21,222 @@ use xmltree::Element;
 use regex::Regex;
 use crate::path::Path;
 use crate::path::PathCommandType;
+use crate::transform::TransformList;
+use crate::transform::TransformType;
 
-fn extract_translate_values(transform: &str) -> Option<(f64, f64)> {
-  let re = Regex::new(r"translate\(\s*(-?\d*\.?\d+)\s*,?\s*(-?\d*\.?\d+)?\s*\)").unwrap();
-    
-  if let Some(captures) = re.captures(transform) {
-    let x = captures.get(1)?.as_str().parse::<f64>().ok()?;
-    let y = captures.get(2).map_or(0.0, |m| m.as_str().parse::<f64>().unwrap_or(0.0));
-    return Some((x, y));
+fn translate_alternating_coords(coords: &mut Vec<f32>, dx: f32, dy: f32) {
+  let mut axis = 'x';
+
+  for coord in coords.iter_mut() {
+    if axis == 'x' {
+      *coord += dx;
+      axis = 'y';
+      continue;
+    }
+
+    *coord += dy;
+    axis = 'x';
   }
-  
-  None
 }
 
-fn apply_translation(path: &mut Path, dx: f64, dy: f64) {
-    for ref mut command in &mut path.commands {
-        if  command.command_type == PathCommandType::MoveTo 
-            || command.command_type == PathCommandType::LineTo
-        { 
+fn scale_alternating_coords(coords: &mut Vec<f32>, scale_dx: f32, scale_dy: f32) {
+  let mut axis = 'x';
 
-            command.values[0] += dx;
-            command.values[1] += dy;
-        }
-
-        if  command.command_type == PathCommandType::HorizontalLine
-        {
-           command.values[0] += dx; 
-        }
-
-        if  command.command_type == PathCommandType::VerticalLine
-        {
-           command.values[0] += dy; 
-        }
-
-        if command.command_type == PathCommandType::CubicBezierCurve
-        {
-           command.values[0] += dx;
-           command.values[1] += dy;
-           command.values[2] += dx;
-           command.values[3] += dy;
-           command.values[4] += dx;
-           command.values[5] += dy;
-        }
-
-        if command.command_type == PathCommandType::AdditionalBezierCurve
-        {
-            command.values[0] += dx;
-            command.values[1] += dy;
-            command.values[2] += dx;
-            command.values[3] += dy;
-        }
-
-        if command.command_type == PathCommandType::QuadraticBezierCurve
-        {
-            command.values[0] += dx;
-            command.values[1] += dy;
-            command.values[2] += dx;
-            command.values[3] += dy;
-        }
-
-        if command.command_type == PathCommandType::AdditionalQuadraticBezierCurve
-        {
-            command.values[0] += dx;
-            command.values[1] += dy;
-        }
-
-        if command.command_type == PathCommandType::Arc
-        {
-            command.values[5] += dx;
-            command.values[6] += dy;
-        }
+  for coord in coords.iter_mut() {
+    if axis == 'x' {
+      *coord *= scale_dx;
+      axis = 'y';
+      continue;
     }
+
+    *coord *= scale_dy;
+    axis = 'x';
+  }
+}
+
+fn apply_translation(path: &mut Path, dx: f32, dy: f32) {
+  for command in path.commands.iter_mut() {
+    if command.command_type == PathCommandType::Arc {
+      // Handle invalid arcs
+      if command.values.len() < 5 {
+        continue;
+      }
+
+      command.values[5] += dx;
+      command.values[6] += dy;
+      continue;
+    }
+    
+    translate_alternating_coords(&mut command.values, dx, dy);
+  }
+}
+
+fn apply_scale(path: &mut Path, scale_dx: f32, scale_dy: f32) {
+  for command in path.commands.iter_mut() {
+    if command.command_type == PathCommandType::Arc {
+      // Handle invalid arcs
+      if command.values.len() < 5 {
+        continue;
+      }
+
+      command.values[5] = command.values[5] * scale_dx;
+      command.values[6] = command.values[5] * scale_dy;
+      continue;
+    }
+    
+    scale_alternating_coords(&mut command.values, scale_dx, scale_dy);
+  }
+}
+
+fn remove_translate_from_transform(element: &mut Element) {
+  if let Some(transform_value) = element.attributes.get_mut("transform") {
+    // Regex pattern to match "translate(...)"
+    let re = Regex::new(r"\s*translate\([-?\d\.]+(?:\s*,?\s*[-?\d\.]+)?\)\s*").unwrap();
+
+    // Replace the "translate(...)" part with an empty string
+    let new_transform_value = re.replace_all(transform_value, "").trim().to_string();
+
+    // If the transform is now empty (i.e., there were only translate transforms), remove the attribute
+    if new_transform_value.is_empty() {
+      element.attributes.remove("transform");
+    } else {
+      // Otherwise, update the transform attribute with the modified value
+      *transform_value = new_transform_value;
+    }
+  }
+}
+
+fn remove_scale_from_transform(element: &mut Element) {
+  if let Some(transform_value) = element.attributes.get_mut("transform") {
+    // Regex pattern to match "translate(...)"
+    let re = Regex::new(r"\s*scale\([-?\d\.]+(?:\s*,?\s*[-?\d\.]+)?\)\s*").unwrap();
+
+    // Replace the "translate(...)" part with an empty string
+    let new_transform_value = re.replace_all(transform_value, "").trim().to_string();
+
+    // If the transform is now empty (i.e., there were only translate transforms), remove the attribute
+    if new_transform_value.is_empty() {
+      element.attributes.remove("transform");
+    } else {
+      // Otherwise, update the transform attribute with the modified value
+      *transform_value = new_transform_value;
+    }
+  }
+}
+
+fn apply_circle_translation(element: &mut Element, dx: f32, dy: f32) {
+  let cx = element.attributes.get("cx");
+  let cy = element.attributes.get("cy");
+
+  if cx.is_none() || cy.is_none()  {
+    return;
+  }
+
+  let cx = cx.unwrap().parse::<f32>().unwrap();
+  let cy = cy.unwrap().parse::<f32>().unwrap();
+
+  element.attributes.insert("cx".to_string(), (cx + dx).to_string());
+  element.attributes.insert("cy".to_string(), (cy + dy).to_string());
+}
+
+fn apply_circle_scale(element: &mut Element, scale_x: f32, scale_y: f32) {
+  let cx = element.attributes.get("cx");
+  let cy = element.attributes.get("cy");
+  let r = element.attributes.get("r");
+
+  if cx.is_none() || cy.is_none() || r.is_none() {
+    return;
+  }
+
+  let cx = cx.unwrap().parse::<f32>().unwrap();
+  let cy = cy.unwrap().parse::<f32>().unwrap();
+  let r = r.unwrap().parse::<f32>().unwrap();
+
+  element.attributes.insert("cx".to_string(), (cx * scale_x).to_string());
+  element.attributes.insert("cy".to_string(), (cy * scale_y).to_string());
+
+  if scale_x != scale_y {
+    element.name = "ellipse".to_string();
+    element.attributes.insert("rx".to_string(), (r * scale_x).to_string());
+    element.attributes.insert("ry".to_string(), (r * scale_y).to_string());
+    element.attributes.remove("r");
+  }
+  else {
+    element.attributes.insert("r".to_string(), (r * scale_x).to_string());
+  }
 }
 
 pub struct ApplyTransformsPlugin {}
 
 impl SingleElementPluginTrait for ApplyTransformsPlugin {
   fn process(&self, element: &Element) -> Result<Element, Box<dyn Error>> {
-    let mut element_clone = element.clone();
-
     let transform = element.attributes.get("transform");
 
-    if transform == None {
-      return Ok(element_clone);
+    if transform.is_none() {
+      return Ok(element.clone());
     }
 
-    let translate_values = extract_translate_values(transform.unwrap());
-
-    let (x, y) = translate_values.unwrap_or((0.0, 0.0));
- 
-    if translate_values == None {
-      return Ok(element_clone);
+    let transform_origin = element.attributes.get("transform-origin");
+    
+    if !transform_origin.is_none() {
+      return Ok(element.clone()); 
     }
 
-    if element_clone.name == "path" {
-      let path_data = element_clone.attributes.get("d");
+    let transforms_list = TransformList::new(transform.unwrap());
 
-      if path_data != None {
-        let mut path = Path::new(path_data.unwrap());
-        
-        // Apply translation
-        apply_translation(&mut path, x, y);
+    if element.name == "path" {
+      if let Some(path_data) = element.attributes.get("d") {
+        let mut path = Path::new(path_data);
+        let mut element_clone = element.clone();
+  
+        for transform in transforms_list.transforms {
+          if transform.transform_type == TransformType::Translate {
+            if let Some(dx) = transform.get_x() {
+              apply_translation(&mut path, dx, transform.get_y().unwrap_or(0.0));
+              remove_translate_from_transform(&mut element_clone);
+            }
+            continue;
+          }
+
+          if transform.transform_type == TransformType::Scale {
+            if let Some(dx) = transform.get_x() {
+              apply_scale(&mut path, dx, transform.get_y().unwrap());
+              remove_scale_from_transform(&mut element_clone);
+            }
+          }
+        }
 
         let transformed_path = path.to_string();
-
-        element_clone.attributes.remove("d");
         element_clone.attributes.insert("d".to_string(), transformed_path);
-        element_clone.attributes.remove("transform");
+
+        return Ok(element_clone);
       }
     }
 
-    Ok(element_clone)
+    if element.name == "circle" {
+      let mut element_clone = element.clone();
+
+      for transform in transforms_list.transforms {
+        if transform.transform_type == TransformType::Translate {
+          if let Some(dx) = transform.get_x() {
+            apply_circle_translation(&mut element_clone, dx, transform.get_y().unwrap_or(0.0));
+            remove_translate_from_transform(&mut element_clone);
+          }
+          continue;
+        }
+
+        if transform.transform_type == TransformType::Scale {
+          if let Some(dx) = transform.get_x() {
+            apply_circle_scale(&mut element_clone, dx, transform.get_y().unwrap());
+            remove_scale_from_transform(&mut element_clone);
+          }
+        }
+      }
+
+      return Ok(element_clone);
+    }
+
+    Ok(element.clone())
   }
 }
 
