@@ -14,7 +14,7 @@ use xmltree::Element;
 use crate::plugin::WholeSVGPluginTrait;
 use regex::Regex;
 use crate::Svg;
-use crate::css::CSSParser;
+use crate::css::CSSPropsList;
 
 pub struct CssToAttributesPlugin {}
 
@@ -35,33 +35,41 @@ impl CssToAttributesPlugin {
   /*
    * TODO: This doesn't work for nested elements, for example a path in <g> or <style> in <defs>
    */
-fn find_styles(svg: &mut Svg) -> (Vec<&mut xmltree::Element>, Vec<&mut xmltree::Element>) {
-    let mut style_elements = Vec::new();
-    let mut elements_with_style_attr = Vec::new();
+    fn find_styles(svg: &mut Svg) {
+        for node in svg.root.children.iter_mut() {
+            if let Some(element) = node.as_mut_element() {
+                if element.name == "style" {
+                    println!("element.name {}", element.name);
+                }
 
-    for node in svg.root.children.iter_mut() {
-        if let Some(element) = node.as_mut_element() {
-            if element.name == "style" {
-                style_elements.push(element); // Move happens here
-            }
-
-            if element.attributes.contains_key("style") {
-                elements_with_style_attr.push(element); // Error: element already moved
+                if element.attributes.contains_key("style") {
+                    CssToAttributesPlugin::apply_inline_style_as_attr(element); 
+                }
             }
         }
     }
 
-    (style_elements, elements_with_style_attr)
-}
-
   fn apply_inline_style_as_attr(element: &mut Element) {
     let style = element.attributes.get("style").unwrap();
-    let css_props = CSSParser::parse_props(style).unwrap();
-    for prop in css_props {
+    let mut css_props_list = CSSPropsList::new(style);
+    //let mut props_to_remove = Vec::new(); // Collect props to remove
+
+    println!("css_props {:?}", css_props_list);
+
+    for prop in css_props_list.list.clone() {
         if PRESENTATION_ATTRIBUTES.contains(&prop.name.as_str()) {
             println!("{} is included in attributes", prop.name);
-            element.attributes.insert(prop.name.to_string(), prop.value);
+            element.attributes.insert(prop.name.to_string(), prop.value.clone());
+            css_props_list.remove(&prop.name.as_str());
         }
+    }
+ 
+    println!("css_props {:?}", css_props_list);
+    if (css_props_list.list.len() == 0) {
+        element.attributes.remove("style");
+    }
+    else {
+        element.attributes.insert("style".to_string(), css_props_list.to_string());
     }
   }
 }
@@ -72,11 +80,7 @@ impl WholeSVGPluginTrait for CssToAttributesPlugin {
       return Ok(svg.clone());
     }
 
-    let (mut style_elements, mut elements_with_style_attr) = CssToAttributesPlugin::find_styles(svg);
-
-    for element in &mut elements_with_style_attr {
-        CssToAttributesPlugin::apply_inline_style_as_attr(element);
-    }
+    CssToAttributesPlugin::find_styles(svg);
 
     Ok(svg.clone())
   }

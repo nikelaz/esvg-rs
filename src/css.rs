@@ -8,12 +8,54 @@ pub struct CSSProp {
   pub value: String
 }
 
+impl CSSProp {
+    pub fn to_string(&self) -> String {
+        return format!("{}: {};", self.name, self.value);
+    }
+}
+
 #[derive(Debug)]
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub struct CSSRule {
   pub selector: String,
   pub props: Vec<CSSProp>
+}
+
+#[derive(Debug)]
+#[derive(Clone)]
+pub struct CSSPropsList {
+    pub list: Vec<CSSProp>
+}
+
+impl CSSPropsList {
+    pub fn new(input_str: &str) -> Self {
+        let props = CSSParser::parse_props(input_str).unwrap();
+
+        CSSPropsList {
+            list: props
+        }
+    }
+
+    pub fn remove(&mut self, key: &str) {
+        let mut props_to_remove = Vec::new();
+
+        for prop in &self.list {
+            if prop.name == key {
+                props_to_remove.push(prop.name.clone());
+            }
+        }
+
+        self.list.retain(|x| !props_to_remove.contains(&x.name));
+    }
+
+    pub fn to_string(&mut self) -> String {
+        self.list
+            .iter()
+            .map(|prop| prop.to_string())
+            .collect::<Vec<_>>() 
+            .join(" ")
+    }
 }
 
 pub struct CSSParser;
