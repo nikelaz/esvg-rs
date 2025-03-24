@@ -17,7 +17,7 @@ use std::error::Error;
 use crate::plugin::SingleElementPluginTrait;
 use xmltree::Element;
 
-pub struct ShapeToPathPlugin {}
+pub struct ShapeToPathPlugin;
 
 fn rect_to_path(element: &mut Element) {
   let x = element.attributes.get("x");

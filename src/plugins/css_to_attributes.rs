@@ -20,8 +20,29 @@ pub struct CssToAttributesPlugin {}
 
 const PRESENTATION_ATTRIBUTES: &[&str] = &[
     "fill",
+    "fill-rule",
+    "fill-opacity",
+    "font-size",
+    "font-style",
+    "font-weight",
+    "font-family",
+    "filter",
+    "clip-path",
+    "clip-rule",
+    "display",
+    "opacity",
+    "overflow",
     "stroke",
-    "stroke-width"
+    "stroke-width",
+    "stroke-dasharray",
+    "stroke-dashoffset",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-miterlimit",
+    "stroke-opacity",
+    "text-decoration",
+    "transform",
+    "transform-origin",
 ];
 
 impl CssToAttributesPlugin {
@@ -52,19 +73,14 @@ impl CssToAttributesPlugin {
   fn apply_inline_style_as_attr(element: &mut Element) {
     let style = element.attributes.get("style").unwrap();
     let mut css_props_list = CSSPropsList::new(style);
-    //let mut props_to_remove = Vec::new(); // Collect props to remove
-
-    println!("css_props {:?}", css_props_list);
 
     for prop in css_props_list.list.clone() {
         if PRESENTATION_ATTRIBUTES.contains(&prop.name.as_str()) {
-            println!("{} is included in attributes", prop.name);
             element.attributes.insert(prop.name.to_string(), prop.value.clone());
             css_props_list.remove(&prop.name.as_str());
         }
     }
  
-    println!("css_props {:?}", css_props_list);
     if (css_props_list.list.len() == 0) {
         element.attributes.remove("style");
     }
