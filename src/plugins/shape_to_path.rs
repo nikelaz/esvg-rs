@@ -112,7 +112,7 @@ fn polygon_to_path(element: &mut Element, close: bool) {
 }
 
 impl SingleElementPluginTrait for ShapeToPathPlugin {
-  fn process(&self, element: &Element) -> Result<Element, Box<dyn Error>> {
+  fn process(&self, element: &mut Element) -> Result<Element, Box<dyn Error>> {
     let mut element_clone = element.clone();
 
     if element_clone.name == "rect" {

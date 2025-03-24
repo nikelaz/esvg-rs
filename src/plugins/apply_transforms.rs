@@ -169,7 +169,7 @@ fn apply_circle_scale(element: &mut Element, scale_x: f32, scale_y: f32) {
 pub struct ApplyTransformsPlugin {}
 
 impl SingleElementPluginTrait for ApplyTransformsPlugin {
-  fn process(&self, element: &Element) -> Result<Element, Box<dyn Error>> {
+  fn process(&self, element: &mut Element) -> Result<Element, Box<dyn Error>> {
     let transform = element.attributes.get("transform");
 
     if transform.is_none() {

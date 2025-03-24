@@ -42,6 +42,6 @@ fn main() {
     println!("Output Size: {}", svg_output.to_string().unwrap().len());
 
     let mut output_file = File::create(out_path).unwrap();
-    let _ = output_file.write_all(svg_output.to_string().unwrap().as_bytes());*/
+    let _ = output_file.write_all(svg_output.to_string().unwrap().as_bytes());
 }
 

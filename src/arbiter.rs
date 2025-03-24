@@ -46,11 +46,11 @@ impl Arbiter {
 
   pub fn process_child_elements(element: &mut Element, single_plugin: &Box<dyn SingleElementPluginTrait>) -> Result<(), Box<dyn Error>> {
     for node in &mut element.children { 
-      let element = node.as_mut_element().unwrap();
+      let mut element = node.as_mut_element().unwrap();
       if is_container_element(&element) {
         Arbiter::process_child_elements(element, single_plugin);
       }
-      let element_plugin_result = single_plugin.process(&element)?;
+      let element_plugin_result = single_plugin.process(&mut element)?;
       if element_to_string(&element_plugin_result).unwrap().len() < element_to_string(&element).unwrap().len() {      
         *element = element_plugin_result;
       }
@@ -63,14 +63,14 @@ impl Arbiter {
     let mut svg_clone = svg.clone();
 
     for whole_svg_plugin in &self.whole_svg_plugins {
-      let svg_output = whole_svg_plugin.process(&svg_clone)?;
+      let svg_output = whole_svg_plugin.process(&mut svg_clone)?;
       if svg_output.to_string().unwrap().len() < svg_clone.to_string().unwrap().len() {
         svg_clone = svg_output;
       }
     }
 
     for single_plugin in &self.single_element_plugins {
-      let root_plugin_result = single_plugin.process(&svg_clone.root)?;
+      let root_plugin_result = single_plugin.process(&mut svg_clone.root)?;
 
       if element_to_string(&root_plugin_result).unwrap().len() < element_to_string(&svg_clone.root).unwrap().len() {
         svg_clone.root = root_plugin_result; 

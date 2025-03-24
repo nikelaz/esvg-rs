@@ -16,7 +16,7 @@ const UNNECESSARY_ATTR_PATTERNS: [&str; 8] = [
 ];
 
 impl SingleElementPluginTrait for RemoveUnnecessaryAttrsPlugin {
-  fn process(&self, element: &Element) -> Result<Element, Box<dyn Error>> {
+  fn process(&self, element: &mut Element) -> Result<Element, Box<dyn Error>> {
     let mut element_clone = element.clone();
 
     element_clone.attributes.retain(|key, _| {

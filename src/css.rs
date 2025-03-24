@@ -24,7 +24,7 @@ impl CSSParser {
         Ok(rules)
     }
 
-    fn parse_rules(input_str: &str) -> Result<Vec<CSSRule>, String> {
+    pub fn parse_rules(input_str: &str) -> Result<Vec<CSSRule>, String> {
         let re = Regex::new(r"(?s)([^{}]+)\s*\{([^}]*)\}").map_err(|e| e.to_string())?;
         let mut results = Vec::new();
 
@@ -41,7 +41,7 @@ impl CSSParser {
         Ok(results)
     }
 
-    fn parse_props(css_block: &str) -> Result<Vec<CSSProp>, String> {
+    pub fn parse_props(css_block: &str) -> Result<Vec<CSSProp>, String> {
         let pattern = Regex::new(r"\s*([^:]+)\s*:\s*([^;]+)\s*;?").map_err(|e| e.to_string())?;
         let mut props = Vec::new();
 

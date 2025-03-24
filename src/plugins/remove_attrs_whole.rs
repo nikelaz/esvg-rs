@@ -5,7 +5,7 @@ use crate::plugin::WholeSVGPluginTrait;
 pub struct RemoveAttrsWholePlugin {}
 
 impl WholeSVGPluginTrait for RemoveAttrsWholePlugin {
-  fn process(&self, svg: &Svg) -> Result<Svg, Box<dyn Error>> {
+  fn process(&self, svg: &mut Svg) -> Result<Svg, Box<dyn Error>> {
     let mut svg_clone = svg.clone();
 
     for node in &mut svg_clone.root.children {
