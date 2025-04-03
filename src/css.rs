@@ -4,8 +4,8 @@ use regex::Regex;
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub struct CSSProp {
-  pub name: String,
-  pub value: String
+    pub name: String,
+    pub value: String
 }
 
 impl CSSProp {
@@ -18,42 +18,29 @@ impl CSSProp {
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub struct CSSRule {
-  pub selector: String,
-  pub props: Vec<CSSProp>
+    pub selector: String,
+    pub props: Vec<CSSProp>
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
-pub struct CSSPropsList {
-    pub list: Vec<CSSProp>
+pub struct InlineStyle {
+    pub props: Vec<CSSProp>,
 }
 
-impl CSSPropsList {
-    pub fn new(input_str: &str) -> Self {
-        let props = CSSParser::parse_props(input_str).unwrap();
-
-        CSSPropsList {
-            list: props
-        }
+impl InlineStyle {
+    pub fn from_string(input_str: &str) -> Result<Self, String> {
+        let props = CSSParser::parse_props(input_str)?;
+        Ok(InlineStyle { props })
     }
 
-    pub fn remove(&mut self, key: &str) {
-        let mut props_to_remove = Vec::new();
-
-        for prop in &self.list {
-            if prop.name == key {
-                props_to_remove.push(prop.name.clone());
-            }
-        }
-
-        self.list.retain(|x| !props_to_remove.contains(&x.name));
+    pub fn remove_prop(&mut self, prop_name: &str) {
+        self.props.retain(|prop| prop.name != prop_name);
     }
 
-    pub fn to_string(&mut self) -> String {
-        self.list
+    pub fn to_string(&self) -> String {
+        self.props
             .iter()
             .map(|prop| prop.to_string())
-            .collect::<Vec<_>>() 
+            .collect::<Vec<String>>()
             .join(" ")
     }
 }
@@ -61,11 +48,6 @@ impl CSSPropsList {
 pub struct CSSParser;
 
 impl CSSParser {
-    pub fn from_string(input_str: &str) -> Result<Vec<CSSRule>, String> {
-        let rules = CSSParser::parse_rules(input_str)?;
-        Ok(rules)
-    }
-
     pub fn parse_rules(input_str: &str) -> Result<Vec<CSSRule>, String> {
         let re = Regex::new(r"(?s)([^{}]+)\s*\{([^}]*)\}").map_err(|e| e.to_string())?;
         let mut results = Vec::new();
@@ -79,7 +61,7 @@ impl CSSParser {
             };
             results.push(css_rule);
         }
-
+        
         Ok(results)
     }
 
@@ -100,3 +82,4 @@ impl CSSParser {
         Ok(props)
     }
 }
+
