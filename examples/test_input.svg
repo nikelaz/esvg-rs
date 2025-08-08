@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" data-label="test" width="400" height="400" viewBox="0 0 400 400">
   <style>.a { fill: red; }.b { stroke: #ff0000; }</style>
   <path style="fill: red;" d="M 10 10 C 20 20, 40 20, 50 10" stroke="black" fill="transparent" transform="translate(10 20) scale(1.5 1.5)" />
-  <g>
-    <path d="M 70 10 C 70 20, 110 20, 110 10" stroke="black" fill="transparent" transform="translate(20 30) scale(1.5 1.5)" />
-    <path d="M 130 10 C 120 20, 180 20, 170 10" stroke="black" fill="transparent" transform="scale(1.5 1.5)" />
+  <g transform="translate(20 30)">
+    <path d="M 70 10 C 70 20, 110 20, 110 10" stroke="black" fill="#00ff00" transform="translate(20 30) scale(1.5 1.5)" />
+    <path d="M 130 10 C 120 20, 180 20, 170 10" stroke="black" fill="#ff0000" transform="scale(1.5 1.5)" />
   </g>
   <path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent" transform="scale(1.5 1.5)" />
   <path d="M 70 60 C 70 80, 110 80, 110 60" stroke="black" fill="transparent" transform="translate(10 20) scale(1.5 1.5)" />

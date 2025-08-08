@@ -2,8 +2,6 @@ use std::error::Error;
 use crate::plugin::SingleElementPluginTrait;
 use xmltree::Element;
 
-pub struct RemoveUnnecessaryAttrsPlugin {}
-
 const UNNECESSARY_ATTR_PATTERNS: [&str; 8] = [
   "lang",
   "desc",
@@ -14,6 +12,8 @@ const UNNECESSARY_ATTR_PATTERNS: [&str; 8] = [
   "contentStyleType",
   "contentScriptType",
 ];
+
+pub struct RemoveUnnecessaryAttrsPlugin;
 
 impl SingleElementPluginTrait for RemoveUnnecessaryAttrsPlugin {
   fn process(&self, element: &mut Element) -> Result<Element, Box<dyn Error>> {
