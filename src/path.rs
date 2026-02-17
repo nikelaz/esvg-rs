@@ -1,7 +1,7 @@
 /*
  * Path Data Representation
  * Author: Nikola Lazarov
- * 
+ *
  * Todo:
  * [ ] - memory management needs to be reworked, it can definitely be more efficient
  * [ ] - change PathCommandCurve data structure
@@ -10,9 +10,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-#[derive(PartialEq)]
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum PathCommandType {
     MoveTo,
     MoveToRelative,
@@ -33,7 +31,7 @@ pub enum PathCommandType {
     Arc,
     ArcRelative,
     Close,
-    CloseAlternate
+    CloseAlternate,
 }
 
 impl PathCommandType {
@@ -60,7 +58,7 @@ impl PathCommandType {
         map.insert("Z", PathCommandType::Close);
         map.insert("z", PathCommandType::CloseAlternate);
 
-        map.get(command).cloned()                               
+        map.get(command).cloned()
     }
 
     fn to_string(&self) -> &'static str {
@@ -89,26 +87,28 @@ impl PathCommandType {
     }
 }
 
-fn is_command_char (c: char) -> bool {
-    let command_chars: HashSet<char> = ['M', 'm', 'L', 'l', 'H', 'h', 'V', 'v', 
-                                       'C', 'c', 'S', 's', 'Q', 'q', 'T', 't', 
-                                       'A', 'a', 'Z', 'z'].iter().cloned().collect();
+fn is_command_char(c: char) -> bool {
+    let command_chars: HashSet<char> = [
+        'M', 'm', 'L', 'l', 'H', 'h', 'V', 'v', 'C', 'c', 'S', 's', 'Q', 'q', 'T', 't', 'A', 'a',
+        'Z', 'z',
+    ]
+    .iter()
+    .cloned()
+    .collect();
     command_chars.contains(&c)
 }
 
-#[derive(PartialEq)]
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PathCommand {
     pub command_type: PathCommandType,
-    pub values: Vec<f32>
+    pub values: Vec<f32>,
 }
 
 impl PathCommand {
     pub fn new(command_type: PathCommandType) -> Self {
         PathCommand {
             command_type: command_type.clone(),
-            values: Vec::new()
+            values: Vec::new(),
         }
     }
 
@@ -125,22 +125,26 @@ impl PathCommand {
         format!(
             "{} {}",
             self.command_type.to_string(),
-            self.values.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(" ")
+            self.values
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<String>>()
+                .join(" ")
         )
     }
 }
 
 #[derive(Debug)]
 pub struct Path {
-    pub commands: Vec<PathCommand>
+    pub commands: Vec<PathCommand>,
 }
 
 impl Path {
     pub fn new(raw_path: &str) -> Self {
         let mut new_instance = Path {
-            commands: Vec::new()
+            commands: Vec::new(),
         };
-        
+
         let mut last_command: Option<PathCommand> = None;
         let mut last_values: String = String::new();
 
@@ -159,8 +163,7 @@ impl Path {
                     PathCommandType::from_string(ch.to_string().as_str()).unwrap(),
                 ));
                 last_values.clear();
-            }
-            else if last_command.is_some() {
+            } else if last_command.is_some() {
                 last_values.push(ch);
             }
 
@@ -178,6 +181,10 @@ impl Path {
     }
 
     pub fn to_string(&self) -> String {
-        self.commands.iter().map(|comm| comm.to_string()).collect::<Vec<String>>().join(" ")
+        self.commands
+            .iter()
+            .map(|comm| comm.to_string())
+            .collect::<Vec<String>>()
+            .join(" ")
     }
 }
