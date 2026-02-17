@@ -15,19 +15,18 @@ pub struct ShapeToPathPlugin;
 
 impl ShapeToPathPlugin {
     fn rect_to_path(element: &mut Element) {
-        let x = element.attributes.get("x");
-        let y = element.attributes.get("y");
         let width = element.attributes.get("width");
         let height = element.attributes.get("height");
         let rx = element.attributes.get("rx");
         let ry = element.attributes.get("ry");
 
-        if x == None || y == None || width == None || height == None || rx != None || ry != None {
+        if width == None || height == None || rx != None || ry != None {
             return;
         }
 
-        let x_val = x.unwrap();
-        let y_val = y.unwrap();
+        let default_zero = "0".to_string();
+        let x_val = element.attributes.get("x").unwrap_or(&default_zero);
+        let y_val = element.attributes.get("y").unwrap_or(&default_zero);
         let width_val = width.unwrap();
         let height_val = height.unwrap();
 

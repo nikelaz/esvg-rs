@@ -1,19 +1,22 @@
+use crate::helpers::bounding_box::compute_element_bbox;
 use crate::plugin::WholeSVGPluginTrait;
 use crate::Svg;
 /**
-* Plugin
-*
-* Name: Remove Unnecessary Clip Paths
-* Author: Nikola Lazarov
-*
-* Description:
-* Removes clip-path definitions and references that have no visual effect.
-* Detects the following cases:
-* - Empty clipPaths (no child elements)
-* - ClipPaths containing a rect that fully covers the SVG viewBox
-* - Orphaned clipPath definitions that are not referenced by any element
-*
-*/
+ * Plugin
+ *
+ * Name: Remove Unnecessary Clip Paths
+ * Author: Nikola Lazarov
+ *
+ * Description:
+ * Removes clip-path definitions and references that have no visual effect.
+ * Detects the following cases:
+ * - Empty clipPaths (no child elements)
+ * - ClipPaths containing a rect that fully covers the SVG viewBox
+ * - ClipPaths whose bounding box fully contains the clipped element's bounding box
+ * - Orphaned clipPath definitions that are not referenced by any element
+ *
+ */
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error::Error;
 use xmltree::Element;
@@ -171,6 +174,73 @@ impl RemoveUnnecessaryClipPathsPlugin {
             }
         }
     }
+
+    /// Build a map from clipPath ID to the clipPath Element in defs.
+    fn collect_clip_path_elements(root: &Element) -> HashMap<String, Element> {
+        let mut map = HashMap::new();
+
+        for child in &root.children {
+            if let Some(defs) = child.as_element() {
+                if defs.name == "defs" {
+                    for def_child in &defs.children {
+                        if let Some(clip_path) = def_child.as_element() {
+                            if clip_path.name == "clipPath" {
+                                if let Some(id) = clip_path.attributes.get("id") {
+                                    map.insert(id.clone(), clip_path.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        map
+    }
+
+    /// Phase 1.5: Remove clip-path attributes from elements where the clipPath's
+    /// bounding box fully contains the clipped element's bounding box, meaning
+    /// the clip has no visual effect.
+    fn remove_redundant_clip_path_refs(
+        element: &mut Element,
+        clip_path_map: &HashMap<String, Element>,
+    ) {
+        // Check this element's clip-path attribute
+        if let Some(clip_attr) = element.attributes.get("clip-path").cloned() {
+            if let Some(id) = Self::parse_clip_path_url(&clip_attr) {
+                if let Some(clip_path_el) = clip_path_map.get(&id) {
+                    // Skip if clipPath has clipPathUnits="objectBoundingBox"
+                    let has_object_bbox_units = clip_path_el
+                        .attributes
+                        .get("clipPathUnits")
+                        .map_or(false, |v| v == "objectBoundingBox");
+
+                    // Skip if clipPath has a transform
+                    let has_transform = clip_path_el.attributes.contains_key("transform");
+
+                    if !has_object_bbox_units && !has_transform {
+                        // Compute both bounding boxes
+                        let clip_bbox = compute_element_bbox(clip_path_el);
+                        let element_bbox = compute_element_bbox(element);
+
+                        if let (Some(cb), Some(eb)) = (clip_bbox, element_bbox) {
+                            if cb.contains(&eb) {
+                                // The clip-path has no visual effect — remove the attribute
+                                element.attributes.remove("clip-path");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Recurse into children
+        for child in element.children.iter_mut() {
+            if let Some(child_element) = child.as_mut_element() {
+                Self::remove_redundant_clip_path_refs(child_element, clip_path_map);
+            }
+        }
+    }
 }
 
 impl WholeSVGPluginTrait for RemoveUnnecessaryClipPathsPlugin {
@@ -205,6 +275,13 @@ impl WholeSVGPluginTrait for RemoveUnnecessaryClipPathsPlugin {
                     }
                 }
             }
+        }
+
+        // Phase 1.5: Remove clip-path attributes where the clipPath's bbox
+        // fully contains the clipped element's bbox (clip has no visual effect)
+        let clip_path_map = Self::collect_clip_path_elements(&svg.root);
+        if !clip_path_map.is_empty() {
+            Self::remove_redundant_clip_path_refs(&mut svg.root, &clip_path_map);
         }
 
         // Phase 2: Find orphaned clipPaths (defined but never referenced)
