@@ -9,7 +9,8 @@ pub mod transform;
 pub use arbiter::Arbiter;
 pub use plugin::{SingleElementPluginTrait, WholeSVGPluginTrait};
 pub use plugins::{
-    ApplyTransformsPlugin, CombinePathsPlugin, CssToAttributesPlugin, OptimizeColorsPlugin,
-    RemoveUnnecessaryAttrsPlugin, RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin,
+    ApplyTransformsPlugin, CollapseGroupsPlugin, CombinePathsPlugin, CssToAttributesPlugin,
+    NumberPrecisionPlugin, OptimizeColorsPlugin, RemoveUnnecessaryAttrsPlugin,
+    RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin,
 };
 pub use svg::Svg;
