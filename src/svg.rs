@@ -1,5 +1,5 @@
 use std::fmt;
-use xmltree::Element;
+use xmltree::{Element, EmitterConfig};
 
 #[derive(Debug, Clone)]
 pub struct Svg {
@@ -15,6 +15,19 @@ impl Svg {
 
     pub fn new(root: &Element) -> Self {
         Self { root: root.clone() }
+    }
+
+    pub fn to_pretty_string(&self) -> Result<String, String> {
+        let mut buffer = Vec::new();
+        let config = EmitterConfig::new()
+            .perform_indent(true)
+            .write_document_declaration(false);
+
+        self.root
+            .write_with_config(&mut buffer, config)
+            .map_err(|e| e.to_string())?;
+
+        String::from_utf8(buffer).map_err(|e| e.to_string())
     }
 }
 

@@ -10,6 +10,6 @@ pub use arbiter::Arbiter;
 pub use plugin::{SingleElementPluginTrait, WholeSVGPluginTrait};
 pub use plugins::{
     ApplyTransformsPlugin, CombinePathsPlugin, CssToAttributesPlugin, OptimizeColorsPlugin,
-    RemoveUnnecessaryAttrsPlugin, ShapeToPathPlugin,
+    RemoveUnnecessaryAttrsPlugin, RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin,
 };
 pub use svg::Svg;
