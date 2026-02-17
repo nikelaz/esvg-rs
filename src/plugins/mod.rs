@@ -7,6 +7,7 @@ pub mod optimize_colors;
 pub mod remove_unnecessary_attrs;
 pub mod remove_unnecessary_clip_paths;
 pub mod shape_to_path;
+pub mod simplify_paths;
 
 // Re-export commonly used items
 pub use apply_transforms::*;
@@ -18,3 +19,4 @@ pub use optimize_colors::*;
 pub use remove_unnecessary_attrs::*;
 pub use remove_unnecessary_clip_paths::*;
 pub use shape_to_path::*;
+pub use simplify_paths::*;

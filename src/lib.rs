@@ -11,6 +11,6 @@ pub use plugin::{SingleElementPluginTrait, WholeSVGPluginTrait};
 pub use plugins::{
     ApplyTransformsPlugin, CollapseGroupsPlugin, CombinePathsPlugin, CssToAttributesPlugin,
     NumberPrecisionPlugin, OptimizeColorsPlugin, RemoveUnnecessaryAttrsPlugin,
-    RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin,
+    RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin, SimplifyPathsPlugin,
 };
 pub use svg::Svg;
