@@ -25,7 +25,7 @@ fn is_container_element(element: &Element) -> bool {
 
 pub struct Arbiter {
     single_element_plugins: Vec<Box<dyn SingleElementPluginTrait>>,
-    whole_svg_plugins: Vec<Box<dyn WholeSVGPluginTrait>>,
+    whole_svg_plugins: Vec<(Box<dyn WholeSVGPluginTrait>, bool)>,
 }
 
 impl Arbiter {
@@ -41,7 +41,11 @@ impl Arbiter {
     }
 
     pub fn add_whole_svg_plugin(&mut self, plugin: Box<dyn WholeSVGPluginTrait>) {
-        self.whole_svg_plugins.push(plugin);
+        self.whole_svg_plugins.push((plugin, false));
+    }
+
+    pub fn add_forced_whole_svg_plugin(&mut self, plugin: Box<dyn WholeSVGPluginTrait>) {
+        self.whole_svg_plugins.push((plugin, true));
     }
 
     pub fn process_child_elements(
@@ -79,9 +83,9 @@ impl Arbiter {
             let _ = Arbiter::process_child_elements(&mut svg_clone.root, single_plugin);
         }
 
-        for whole_svg_plugin in &self.whole_svg_plugins {
+        for (whole_svg_plugin, forced) in &self.whole_svg_plugins {
             let svg_output = whole_svg_plugin.process(&mut svg_clone)?;
-            if svg_output.to_string().len() < svg_clone.to_string().len() {
+            if *forced || svg_output.to_string().len() < svg_clone.to_string().len() {
                 svg_clone = svg_output;
             }
         }

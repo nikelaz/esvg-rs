@@ -38,8 +38,9 @@ fn main() {
   // Run plugins
   arbiter.add_single_element_plugin(Box::new(RemoveUnnecessaryAttrsPlugin {}));
   arbiter.add_single_element_plugin(Box::new(ShapeToPathPlugin {}));
-  arbiter.add_single_element_plugin(Box::new(ApplyTransformsPlugin {}));
+
   arbiter.add_single_element_plugin(Box::new(OptimizeColorsPlugin {}));
+  arbiter.add_whole_svg_plugin(Box::new(ApplyTransformsPlugin {}));
   arbiter.add_whole_svg_plugin(Box::new(CssToAttributesPlugin {}));
   arbiter.add_whole_svg_plugin(Box::new(CombinePathsPlugin {}));
 
