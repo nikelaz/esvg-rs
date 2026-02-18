@@ -99,6 +99,20 @@ impl CollapseGroupsPlugin {
                     // Group not collapsible — keep as-is
                     new_children.push(xmltree::XMLNode::Element(group));
                 }
+                xmltree::XMLNode::Element(defs) if defs.name == "defs" => {
+                    let child_element_count = defs
+                        .children
+                        .iter()
+                        .filter(|c| c.as_element().is_some())
+                        .count();
+
+                    // Remove empty defs
+                    if child_element_count == 0 {
+                        continue;
+                    }
+
+                    new_children.push(xmltree::XMLNode::Element(defs));
+                }
                 other => {
                     // Not a group element — keep as-is
                     new_children.push(other);
