@@ -10,7 +10,8 @@ pub use arbiter::Arbiter;
 pub use plugin::{SingleElementPluginTrait, WholeSVGPluginTrait};
 pub use plugins::{
     ApplyTransformsPlugin, CollapseGroupsPlugin, CombinePathsPlugin, CssToAttributesPlugin,
-    MangleIdsPlugin, NumberPrecisionPlugin, OptimizeColorsPlugin, RemoveUnnecessaryAttrsPlugin,
-    RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin, SimplifyPathsPlugin,
+    MangleIdsPlugin, NumberPrecisionPlugin, OptimizeColorsPlugin, RemoveEmptyTextPlugin,
+    RemoveUnnecessaryAttrsPlugin, RemoveUnnecessaryClipPathsPlugin, ShapeToPathPlugin,
+    SimplifyPathsPlugin, SortAttrsPlugin,
 };
 pub use svg::Svg;
