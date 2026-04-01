@@ -6,6 +6,10 @@ edition = "2024"
 [lib]
 name = "esvg_rs"
 path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]
+
+[features]
+ffi = []
 
 [[bin]]
 name = "esvg-rs"

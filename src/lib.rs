@@ -15,3 +15,6 @@ pub use plugins::{
     SimplifyPathsPlugin, SortAttrsPlugin,
 };
 pub use svg::Svg;
+
+#[cfg(feature = "ffi")]
+pub mod ffi;
