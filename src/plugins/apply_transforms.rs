@@ -61,35 +61,111 @@ impl ApplyTransformsPlugin {
 
     fn apply_translation(path: &mut Path, dx: f32, dy: f32) {
         for command in path.commands.iter_mut() {
-            if command.command_type == PathCommandType::Arc {
-                // Handle invalid arcs
-                if command.values.len() < 5 {
-                    continue;
+            match command.command_type {
+                // Absolute arc: translate only the endpoint of each arc segment.
+                // Each arc segment is 7 values: rx ry x-rotation large-arc sweep x y
+                // Only indices 5 and 6 (within each 7-value group) are the endpoint.
+                // rx, ry, x-rotation, large-arc-flag, sweep-flag are unaffected.
+                PathCommandType::Arc => {
+                    let mut i = 0;
+                    while i + 6 < command.values.len() {
+                        command.values[i + 5] += dx;
+                        command.values[i + 6] += dy;
+                        i += 7;
+                    }
                 }
 
-                command.values[5] += dx;
-                command.values[6] += dy;
-                continue;
-            }
+                // Relative arc: all values are offsets — endpoint is already relative,
+                // so translation has no effect.
+                PathCommandType::ArcRelative => {}
 
-            Self::translate_alternating_coords(&mut command.values, dx, dy);
+                // Absolute horizontal line: single x-coordinate.
+                PathCommandType::HorizontalLine => {
+                    for v in command.values.iter_mut() {
+                        *v += dx;
+                    }
+                }
+
+                // Absolute vertical line: single y-coordinate.
+                PathCommandType::VerticalLine => {
+                    for v in command.values.iter_mut() {
+                        *v += dy;
+                    }
+                }
+
+                // Relative commands encode offsets from the current position.
+                // Translation of the entire shape does not change these offsets.
+                PathCommandType::MoveToRelative
+                | PathCommandType::LineToRelative
+                | PathCommandType::HorizontalLineRelative
+                | PathCommandType::VerticalLineRelative
+                | PathCommandType::CubicBezierCurveRelative
+                | PathCommandType::AdditionalBezierCurveRelative
+                | PathCommandType::QuadraticBezierCurveRelative
+                | PathCommandType::AdditionalQuadraticBezierCurveRelative => {}
+
+                // Commands with no values.
+                PathCommandType::Close | PathCommandType::CloseAlternate => {}
+
+                // All remaining absolute commands use alternating x/y coordinates.
+                _ => {
+                    Self::translate_alternating_coords(&mut command.values, dx, dy);
+                }
+            }
         }
     }
 
     fn apply_scale(path: &mut Path, scale_dx: f32, scale_dy: f32) {
         for command in path.commands.iter_mut() {
-            if command.command_type == PathCommandType::Arc {
-                // Handle invalid arcs
-                if command.values.len() < 5 {
-                    continue;
+            match command.command_type {
+                // Absolute arc: scale rx (index 0), ry (index 1), and the endpoint
+                // (indices 5 and 6) within each 7-value arc segment.
+                // x-rotation (2) and flags (3, 4) are untouched.
+                PathCommandType::Arc => {
+                    let mut i = 0;
+                    while i + 6 < command.values.len() {
+                        command.values[i + 0] *= scale_dx; // rx
+                        command.values[i + 1] *= scale_dy; // ry
+                        command.values[i + 5] *= scale_dx; // endpoint x
+                        command.values[i + 6] *= scale_dy; // endpoint y
+                        i += 7;
+                    }
                 }
 
-                command.values[5] = command.values[5] * scale_dx;
-                command.values[6] = command.values[5] * scale_dy;
-                continue;
-            }
+                // Relative arc: rx, ry, and the relative endpoint dx/dy all scale.
+                PathCommandType::ArcRelative => {
+                    let mut i = 0;
+                    while i + 6 < command.values.len() {
+                        command.values[i + 0] *= scale_dx; // rx
+                        command.values[i + 1] *= scale_dy; // ry
+                        command.values[i + 5] *= scale_dx; // relative endpoint dx
+                        command.values[i + 6] *= scale_dy; // relative endpoint dy
+                        i += 7;
+                    }
+                }
 
-            Self::scale_alternating_coords(&mut command.values, scale_dx, scale_dy);
+                // Absolute horizontal line: single x-coordinate.
+                PathCommandType::HorizontalLine | PathCommandType::HorizontalLineRelative => {
+                    for v in command.values.iter_mut() {
+                        *v *= scale_dx;
+                    }
+                }
+
+                // Absolute/relative vertical line: single y-coordinate.
+                PathCommandType::VerticalLine | PathCommandType::VerticalLineRelative => {
+                    for v in command.values.iter_mut() {
+                        *v *= scale_dy;
+                    }
+                }
+
+                // Commands with no values.
+                PathCommandType::Close | PathCommandType::CloseAlternate => {}
+
+                // All other commands (absolute and relative) use alternating x/y values.
+                _ => {
+                    Self::scale_alternating_coords(&mut command.values, scale_dx, scale_dy);
+                }
+            }
         }
     }
 
@@ -417,5 +493,153 @@ impl WholeSVGPluginTrait for ApplyTransformsPlugin {
         }
 
         Ok(svg_clone)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::path::Path;
+
+    fn approx_eq(a: f32, b: f32) -> bool {
+        (a - b).abs() < 1e-3
+    }
+
+    /// Translating an Arc command with two chained arc segments must move
+    /// the endpoint of BOTH segments, not just the first.
+    #[test]
+    fn translate_multi_arc_moves_all_endpoints() {
+        // Two chained arcs: A rx ry rot flag flag x1 y1 rx ry rot flag flag x2 y2
+        let mut path = Path::new("M 0 0 A 10 10 0 0 1 20 30 10 10 0 0 0 40 50 Z");
+        ApplyTransformsPlugin::apply_translation(&mut path, 100.0, 200.0);
+
+        let arc = &path.commands[1];
+        // First arc endpoint: (20+100, 30+200) = (120, 230)
+        assert!(
+            approx_eq(arc.values[5], 120.0),
+            "first arc x: {}",
+            arc.values[5]
+        );
+        assert!(
+            approx_eq(arc.values[6], 230.0),
+            "first arc y: {}",
+            arc.values[6]
+        );
+        // Second arc endpoint: (40+100, 50+200) = (140, 250)
+        assert!(
+            approx_eq(arc.values[12], 140.0),
+            "second arc x: {}",
+            arc.values[12]
+        );
+        assert!(
+            approx_eq(arc.values[13], 250.0),
+            "second arc y: {}",
+            arc.values[13]
+        );
+        // Radii and flags must be unchanged
+        assert!(approx_eq(arc.values[0], 10.0));
+        assert!(approx_eq(arc.values[3], 0.0)); // large-arc flag
+        assert!(approx_eq(arc.values[4], 1.0)); // sweep flag
+    }
+
+    /// Scaling an Arc command with two chained arc segments must scale
+    /// rx, ry, and the endpoint of BOTH segments.
+    #[test]
+    fn scale_multi_arc_scales_all_segments() {
+        let mut path = Path::new("M 0 0 A 10 20 0 0 1 30 40 5 6 0 1 0 70 80 Z");
+        ApplyTransformsPlugin::apply_scale(&mut path, 2.0, 3.0);
+
+        let arc = &path.commands[1];
+        // First arc: rx*2=20, ry*3=60, x*2=60, y*3=120
+        assert!(
+            approx_eq(arc.values[0], 20.0),
+            "first rx: {}",
+            arc.values[0]
+        );
+        assert!(
+            approx_eq(arc.values[1], 60.0),
+            "first ry: {}",
+            arc.values[1]
+        );
+        assert!(approx_eq(arc.values[5], 60.0), "first x: {}", arc.values[5]);
+        assert!(
+            approx_eq(arc.values[6], 120.0),
+            "first y: {}",
+            arc.values[6]
+        );
+        // Flags must be unchanged
+        assert!(approx_eq(arc.values[3], 0.0)); // large-arc flag
+        assert!(approx_eq(arc.values[4], 1.0)); // sweep flag
+                                                // Second arc: rx*2=10, ry*3=18, x*2=140, y*3=240
+        assert!(
+            approx_eq(arc.values[7], 10.0),
+            "second rx: {}",
+            arc.values[7]
+        );
+        assert!(
+            approx_eq(arc.values[8], 18.0),
+            "second ry: {}",
+            arc.values[8]
+        );
+        assert!(
+            approx_eq(arc.values[12], 140.0),
+            "second x: {}",
+            arc.values[12]
+        );
+        assert!(
+            approx_eq(arc.values[13], 240.0),
+            "second y: {}",
+            arc.values[13]
+        );
+        // Second arc flags unchanged
+        assert!(approx_eq(arc.values[10], 1.0)); // large-arc flag
+        assert!(approx_eq(arc.values[11], 0.0)); // sweep flag
+    }
+
+    /// Regression test for the specific path from undraw_file-analysis_nbtc.svg.
+    /// The path has a sub-path starting with 'm' (relative move) followed by two
+    /// chained absolute 'A' arcs. Translation must be applied to both arc endpoints.
+    #[test]
+    fn translate_real_world_multi_arc_path() {
+        // Simplified version of the problematic sub-path:
+        // m-.07,36.631 A17.4 17.4 0 1 0 245.5,608.594 17.4 17.4 0 0 0 262.863,626.027 Z
+        // with translate(368.984, 161.693)
+        let d = "M 262.933 589.4 a 19.232 19.232 0 1 1 -19.268 19.195 \
+                 A 19.232 19.232 0 0 1 262.933 589.4 Z \
+                 m -0.07 36.631 \
+                 A 17.4 17.4 0 1 0 245.5 608.594 17.4 17.4 0 0 0 262.863 626.027 Z";
+        let mut path = Path::new(d);
+        ApplyTransformsPlugin::apply_translation(&mut path, 368.984, 161.693);
+
+        // Find the second A command (the one after 'm')
+        // Commands: M, a, A, m, A, Z
+        let a_cmd = path
+            .commands
+            .iter()
+            .find(|c| c.command_type == crate::path::PathCommandType::Arc && c.values.len() >= 14)
+            .expect("should find multi-arc A command");
+
+        // First endpoint: 245.5 + 368.984 = 614.484, 608.594 + 161.693 = 770.287
+        assert!(
+            approx_eq(a_cmd.values[5], 614.484),
+            "first x: {}",
+            a_cmd.values[5]
+        );
+        assert!(
+            approx_eq(a_cmd.values[6], 770.287),
+            "first y: {}",
+            a_cmd.values[6]
+        );
+        // Second endpoint: 262.863 + 368.984 = 631.847, 626.027 + 161.693 = 787.72
+        assert!(
+            approx_eq(a_cmd.values[12], 631.847),
+            "second x: {}",
+            a_cmd.values[12]
+        );
+        assert!(
+            approx_eq(a_cmd.values[13], 787.72),
+            "second y: {}",
+            a_cmd.values[13]
+        );
     }
 }

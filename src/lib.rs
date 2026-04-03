@@ -16,5 +16,145 @@ pub use plugins::{
 };
 pub use svg::Svg;
 
-#[cfg(feature = "ffi")]
-pub mod ffi;
+pub const PLUGIN_NAMES: [&str; 13] = [
+    "Apply Transforms",
+    "Collapse Groups",
+    "Combine Paths",
+    "CSS to Attributes",
+    "Mangle IDs",
+    "Number Precision",
+    "Optimize Colors",
+    "Remove Empty Text",
+    "Remove Unnecessary Attrs",
+    "Remove Unnecessary Clip Paths",
+    "Shape to Path",
+    "Simplify Paths",
+    "Sort Attrs",
+];
+
+pub struct PluginConfig {
+    pub apply_transforms: bool,
+    pub collapse_groups: bool,
+    pub combine_paths: bool,
+    pub css_to_attributes: bool,
+    pub mangle_ids: bool,
+    pub number_precision: bool,
+    pub optimize_colors: bool,
+    pub remove_empty_text: bool,
+    pub remove_unnecessary_attrs: bool,
+    pub remove_unnecessary_clip_paths: bool,
+    pub shape_to_path: bool,
+    pub simplify_paths: bool,
+    pub sort_attrs: bool,
+}
+
+impl Default for PluginConfig {
+    fn default() -> Self {
+        PluginConfig {
+            apply_transforms: true,
+            collapse_groups: true,
+            combine_paths: true,
+            css_to_attributes: true,
+            mangle_ids: true,
+            number_precision: true,
+            optimize_colors: true,
+            remove_empty_text: true,
+            remove_unnecessary_attrs: true,
+            remove_unnecessary_clip_paths: true,
+            shape_to_path: true,
+            simplify_paths: true,
+            sort_attrs: true,
+        }
+    }
+}
+
+pub struct SvgExportOptions {
+    pub include_viewbox: bool,
+    pub include_dimensions: bool,
+    pub width: f32,
+    pub height: f32,
+}
+
+pub fn apply_svg_export_options(
+    svg_string: &str,
+    opts: &SvgExportOptions,
+) -> Result<String, String> {
+    let mut svg = Svg::from_string(&svg_string.to_string())?;
+    let root = &mut svg.root;
+
+    if !opts.include_viewbox {
+        root.attributes.remove("viewBox");
+    }
+
+    if opts.include_dimensions {
+        // Format as integers if they are whole numbers, otherwise as decimals
+        let w_str = if opts.width.fract() == 0.0 {
+            format!("{}", opts.width as i64)
+        } else {
+            format!("{:.2}", opts.width)
+        };
+        let h_str = if opts.height.fract() == 0.0 {
+            format!("{}", opts.height as i64)
+        } else {
+            format!("{:.2}", opts.height)
+        };
+        root.attributes.insert("width".into(), w_str);
+        root.attributes.insert("height".into(), h_str);
+    } else {
+        root.attributes.remove("width");
+        root.attributes.remove("height");
+    }
+
+    Ok(svg.to_string())
+}
+
+pub fn optimize(svg_string: &str, config: &PluginConfig) -> Result<String, String> {
+    let svg = Svg::from_string(&svg_string.to_string()).map_err(|e| e.to_string())?;
+    let mut arbiter = Arbiter::new();
+
+    // Single-element plugins
+    if config.remove_unnecessary_attrs {
+        arbiter.add_single_element_plugin(Box::new(RemoveUnnecessaryAttrsPlugin));
+    }
+    if config.optimize_colors {
+        arbiter.add_single_element_plugin(Box::new(OptimizeColorsPlugin));
+    }
+    if config.shape_to_path {
+        arbiter.add_single_element_plugin(Box::new(ShapeToPathPlugin));
+    }
+    if config.number_precision {
+        arbiter.add_single_element_plugin(Box::new(NumberPrecisionPlugin { precision: 2 }));
+    }
+    if config.simplify_paths {
+        arbiter.add_single_element_plugin(Box::new(SimplifyPathsPlugin {}));
+    }
+    if config.sort_attrs {
+        arbiter.add_single_element_plugin(Box::new(SortAttrsPlugin));
+    }
+
+    // Whole-SVG plugins
+    if config.css_to_attributes {
+        arbiter.add_whole_svg_plugin(Box::new(CssToAttributesPlugin));
+    }
+    if config.apply_transforms {
+        arbiter.add_whole_svg_plugin(Box::new(ApplyTransformsPlugin));
+    }
+    if config.collapse_groups {
+        arbiter.add_forced_whole_svg_plugin(Box::new(CollapseGroupsPlugin));
+    }
+    if config.remove_empty_text {
+        arbiter.add_whole_svg_plugin(Box::new(RemoveEmptyTextPlugin));
+    }
+    if config.remove_unnecessary_clip_paths {
+        arbiter.add_whole_svg_plugin(Box::new(RemoveUnnecessaryClipPathsPlugin));
+    }
+    if config.combine_paths {
+        arbiter.add_whole_svg_plugin(Box::new(CombinePathsPlugin));
+    }
+    if config.mangle_ids {
+        arbiter.add_forced_whole_svg_plugin(Box::new(MangleIdsPlugin { prefix: None }));
+    }
+
+    let result = arbiter.process(&svg).map_err(|e| e.to_string())?;
+    Ok(result.to_string())
+}
